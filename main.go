@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,6 +15,31 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
+
+func parseKVFile(data []byte, result *map[string]interface{}) error {
+	if data == nil || len(data) == 0 {
+		return errors.New("data is empty or null")
+	}
+	*result = make(map[string]interface{})
+	reader := bytes.NewBuffer(data)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			break
+		}
+		trimmedLine := bytes.TrimSpace(line)
+		if len(trimmedLine) == 0 || trimmedLine[0] == '#' {
+			continue // skip empty or commented lines
+		}
+		keyValue := bytes.SplitN(trimmedLine, []byte("="), 2)
+		if len(keyValue) != 2 {
+			return errors.New("invalid key=value format")
+		}
+		slog.Debug("key = " + string(bytes.TrimSpace(keyValue[0])))
+		(*result)[string(bytes.TrimSpace(keyValue[0]))] = string(bytes.TrimSpace(keyValue[1]))
+	}
+	return nil
+}
 
 // mergeMaps merges two maps into one.
 func mergeMaps(m1, m2 map[string]interface{}) map[string]interface{} {
@@ -67,6 +94,14 @@ func processFiles(files []string) (map[string]interface{}, error) {
 				return result, err
 			}
 			result = mergeMaps(result, tomlData)
+		case ".kv", ".txt":
+			var kvData map[string]interface{}
+			err = parseKVFile(data, &kvData)
+			if err != nil {
+				slog.Error("Error unmarshalling Key-Value file %s: %s\n", file, err)
+				return result, err
+			}
+			result = mergeMaps(result, kvData)
 		default:
 			slog.Warn("Unsupported file format for file %s\n", file)
 		}
