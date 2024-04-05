@@ -10,7 +10,10 @@ import (
 
 	"encoding/json"
 
+	"text/template"
+
 	"github.com/BurntSushi/toml"
+	"github.com/noirbizarre/gonja"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -110,22 +113,53 @@ func processFiles(files []string) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func writeOutput(data map[string]interface{}, filename string) error {
-	ext := filepath.Ext(filename)
-	switch ext {
-	case ".yaml", ".yml":
-		yamlData, err := yaml.Marshal(data)
-		if err != nil {
-			return err
-		}
-		err = os.WriteFile(filename, yamlData, 0644)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unsupported output file format: %s", ext)
+func writeOutput(data string, filename string) error {
+	err := os.WriteFile(filename, []byte(data), 0644)
+	if err != nil {
+		return err
 	}
 	return nil
+}
+
+func renderTemplateFileJ2(templateFile string, data *map[string]interface{}, outputFile string) (string, error) {
+	tpl := gonja.Must(gonja.FromFile(templateFile))
+
+	// Execute the template
+	output, err := tpl.Execute(*data)
+	if err != nil {
+		fmt.Println(err)
+		// slog.Error("Template Rendition " + string(err))
+		return "", err
+	}
+
+	// Print or use the output as needed
+	slog.Debug(output)
+
+	return output, nil
+}
+
+func renderTemplateFile(templateFile string, data *map[string]interface{}, outputFile string) (string, error) {
+	tpl, err := template.ParseFiles(templateFile)
+	if err != nil {
+		panic(err)
+	}
+
+	ofh, err := os.Create(outputFile)
+	defer ofh.Close()
+	// writer := bufio.NewWriter(ofh)
+
+	// Execute the template
+	err = tpl.Execute(ofh, *data)
+	if err != nil {
+		fmt.Println(err)
+		// slog.Error("Template Rendition " + string(err))
+		return "", err
+	}
+
+	// Print or use the output as needed
+	// slog.Debug(output)
+
+	return "", nil
 }
 
 var rootCmd = &cobra.Command{
@@ -137,6 +171,12 @@ var rootCmd = &cobra.Command{
 func runMooltah(cmd *cobra.Command, args []string) {
 	files := viper.GetStringSlice("files")
 	outputFile := viper.GetString("output")
+	if len(args) == 0 {
+		slog.Error("Please provide template input file")
+		return
+	}
+	templateFile := args[0]
+	slog.Info(templateFile)
 
 	var result map[string]interface{}
 
@@ -147,10 +187,19 @@ func runMooltah(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println(result)
-	err = writeOutput(result, outputFile)
+	output, err := renderTemplateFile(templateFile, &result, outputFile)
 	if err != nil {
 		slog.Error("Failed %v", err)
 		return
+	}
+
+	if output != "" {
+		slog.Info("Aaya")
+		err = writeOutput(output, outputFile)
+		if err != nil {
+			slog.Error("Failed %v", err)
+			return
+		}
 	}
 
 }
