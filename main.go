@@ -110,6 +110,24 @@ func processFiles(files []string) (map[string]interface{}, error) {
 	return result, nil
 }
 
+func writeOutput(data map[string]interface{}, filename string) error {
+	ext := filepath.Ext(filename)
+	switch ext {
+	case ".yaml", ".yml":
+		yamlData, err := yaml.Marshal(data)
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(filename, yamlData, 0644)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported output file format: %s", ext)
+	}
+	return nil
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "mooltah",
 	Short: "A command-line tool for processing YAML, JSON, and TOML files",
@@ -118,6 +136,7 @@ var rootCmd = &cobra.Command{
 
 func runMooltah(cmd *cobra.Command, args []string) {
 	files := viper.GetStringSlice("files")
+	outputFile := viper.GetString("output")
 
 	var result map[string]interface{}
 
@@ -128,13 +147,21 @@ func runMooltah(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println(result)
+	err = writeOutput(result, outputFile)
+	if err != nil {
+		slog.Error("Failed %v", err)
+		return
+	}
+
 }
 
 func main() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.Flags().StringSliceP("files", "v", []string{}, "List of files to process")
+	rootCmd.Flags().StringP("output", "o", "", "Output file")
 	viper.BindPFlag("files", rootCmd.Flags().Lookup("files"))
+	viper.BindPFlag("output", rootCmd.Flags().Lookup("output"))
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
