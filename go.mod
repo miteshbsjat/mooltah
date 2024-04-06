@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/BurntSushi/toml v1.3.2
+	github.com/alexflint/go-arg v1.4.3
 	github.com/noirbizarre/gonja v0.0.0-20200629003239-4d051fd0be61
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
@@ -11,6 +12,7 @@ require (
 )
 
 require (
+	github.com/alexflint/go-scalar v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/goph/emperror v0.17.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
