@@ -9,27 +9,34 @@ I dedicate this cli to my GrandFather Late Shri Moolchand ji Jat.
 * The code can be compiled using Golang 1.21+ 
 
 ```bash
-go build main.go
+make build
 ```
 
 This will create executable file `main`, which can be copied to any location in your `$PATH`
 
 ```bash
-sudo cp main /usr/local/bin/mooltah
+make install
 ```
 
 ## Usage
 
 ```bash
- command-line tool for processing YAML, JSON, and TOML files
+mooltah --help
+this program renders input template to output with the configurations given by --variable files
+mooltah 1.0.0
+Usage: mooltah [--variable VARIABLE] [--output OUTPUT] [INPUTTEMPLATEFILE]
 
-Usage:
-  mooltah [flags] <input_template_file>
+Positional arguments:
+  INPUTTEMPLATEFILE      Template File which will be rendered to OUTPUT
 
-Flags:
-  -v, --files strings   List of files to process
-  -h, --help            help for mooltah
-  -o, --output string   Output file
+Options:
+  --variable VARIABLE, -v VARIABLE
+                         Read variables from YAML, JSON, TOML, and/or Key=Value Files
+  --output OUTPUT, -o OUTPUT
+                         Output file which will have rendition of input template file
+  --help, -h             display this help and exit
+  --version              display version and exit
+
 ```
 
 ## Sample Run
