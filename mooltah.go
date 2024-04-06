@@ -13,9 +13,8 @@ import (
 	"text/template"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alexflint/go-arg"
 	"github.com/noirbizarre/gonja"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
 
@@ -162,20 +161,16 @@ func renderTemplateFile(templateFile string, data *map[string]interface{}, outpu
 	return "", nil
 }
 
-var rootCmd = &cobra.Command{
-	Use:   "mooltah",
-	Short: "A command-line tool for processing YAML, JSON, and TOML files",
-	Run:   runMooltah,
+type args struct {
+	Variable          []string `arg:"-v,--variable,separate" help:"Read variables from YAML, JSON, TOML, and/or Key=Value Files"`
+	InputTemplateFile string   `arg:"positional" help:"Template File which will be rendered to OUTPUT"`
+	Output            string   `arg:"-o,--output" help:"Output file which will have rendition of input template file"`
 }
 
-func runMooltah(cmd *cobra.Command, args []string) {
-	files := viper.GetStringSlice("files")
-	outputFile := viper.GetString("output")
-	if len(args) == 0 {
-		slog.Error("Please provide template input file")
-		return
-	}
-	templateFile := args[0]
+func runMooltah(arguments args) error {
+	files := arguments.Variable
+	outputFile := arguments.Output
+	templateFile := arguments.InputTemplateFile
 	slog.Info(templateFile)
 
 	var result map[string]interface{}
@@ -183,14 +178,14 @@ func runMooltah(cmd *cobra.Command, args []string) {
 	result, err := processFiles(files)
 	if err != nil {
 		slog.Error("Failed %v", err)
-		return
+		return err
 	}
 
 	fmt.Println(result)
 	output, err := renderTemplateFile(templateFile, &result, outputFile)
 	if err != nil {
 		slog.Error("Failed %v", err)
-		return
+		return err
 	}
 
 	if output != "" {
@@ -198,26 +193,34 @@ func runMooltah(cmd *cobra.Command, args []string) {
 		err = writeOutput(output, outputFile)
 		if err != nil {
 			slog.Error("Failed %v", err)
-			return
+			return err
 		}
 	}
+	return nil
+}
 
+func (args) Version() string {
+	return "mooltah 1.0.0"
+}
+
+func (args) Description() string {
+	return "this program renders input template to output with the configurations given by --variable files"
 }
 
 func main() {
-	cobra.OnInitialize(initConfig)
-
-	rootCmd.Flags().StringSliceP("files", "v", []string{}, "List of files to process")
-	rootCmd.Flags().StringP("output", "o", "", "Output file")
-	viper.BindPFlag("files", rootCmd.Flags().Lookup("files"))
-	viper.BindPFlag("output", rootCmd.Flags().Lookup("output"))
-
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+	var arguments args
+	arg.MustParse(&arguments)
+	if arguments.InputTemplateFile == "" {
+		slog.Error("Please provide InputTemplateFile")
 		os.Exit(1)
 	}
-}
-
-func initConfig() {
-	viper.AutomaticEnv()
+	if arguments.Output == "" {
+		slog.Error("Please provide Output file")
+		os.Exit(1)
+	}
+	err := runMooltah(arguments)
+	if err != nil {
+		slog.Error("Error ", err)
+		os.Exit(2)
+	}
 }
