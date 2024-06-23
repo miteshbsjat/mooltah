@@ -1,6 +1,6 @@
 module github.com/miteshbsjat/mooltah
 
-go 1.19
+go 1.21
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -12,9 +12,7 @@ require (
 require (
 	github.com/alexflint/go-scalar v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/goph/emperror v0.17.1 // indirect
-	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
