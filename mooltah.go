@@ -2,21 +2,31 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"encoding/json"
 
 	"text/template"
 
+	_ "./embedded_binaries"
 	"github.com/BurntSushi/toml"
 	"github.com/alexflint/go-arg"
 	"github.com/noirbizarre/gonja"
 	"gopkg.in/yaml.v2"
 )
+
+//go:embed binary_arm64
+var binaryArm64 embed.FS
+
+//go:embed binary_amd64
+var binaryAmd64 embed.FS
 
 func parseKVFile(data []byte, result *map[string]interface{}) error {
 	if data == nil || len(data) == 0 {
@@ -135,6 +145,57 @@ func renderTemplateFileJ2(templateFile string, data *map[string]interface{}, out
 	slog.Debug(output)
 
 	return output, nil
+}
+
+func renderTemplateFileMJ(templateFile string, data *map[string]interface{}, outputFile string) (string, error) {
+	var binaryToExecute []byte
+	arch := runtime.GOARCH
+
+	switch arch {
+	case "arm64":
+		data, err := binaryArm64.ReadFile("binary_arm64")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		binaryToExecute = data
+	case "amd64":
+		data, err := binaryAmd64.ReadFile("binary_amd64")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		binaryToExecute = data
+	default:
+		fmt.Printf("Unsupported architecture: %s\n", arch)
+		return
+	}
+
+	// Write the binary to a temporary file and execute it
+	tmpfile, err := os.CreateTemp("", "binary")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer os.Remove(tmpfile.Name()) // Remove the temp file after execution
+
+	if _, err = tmpfile.Write(binaryToExecute); err != nil {
+		fmt.Println(err)
+		return
+	}
+	if err := tmpfile.Close(); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	cmd := exec.Command(tmpfile.Name()) // Execute the binary
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Failed to execute binary: %s\n", string(output))
+	} else {
+		fmt.Println("Binary executed successfully")
+	}
+
 }
 
 func renderTemplateFile(templateFile string, data *map[string]interface{}, outputFile string) (string, error) {
