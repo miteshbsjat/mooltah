@@ -18,12 +18,11 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/alexflint/go-arg"
-	"github.com/noirbizarre/gonja"
 	"gopkg.in/yaml.v2"
 )
 
 func parseKVFile(data []byte, result *map[string]interface{}) error {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return errors.New("data is empty or null")
 	}
 	*result = make(map[string]interface{})
@@ -141,23 +140,6 @@ func createYAMLFile(data *map[string]interface{}, filename string) error {
 	return nil
 }
 
-func renderTemplateFileJ2(templateFile string, data *map[string]interface{}, outputFile string) (string, error) {
-	tpl := gonja.Must(gonja.FromFile(templateFile))
-
-	// Execute the template
-	output, err := tpl.Execute(*data)
-	if err != nil {
-		fmt.Println(err)
-		// slog.Error("Template Rendition " + string(err))
-		return "", err
-	}
-
-	// Print or use the output as needed
-	slog.Debug(output)
-
-	return output, nil
-}
-
 func renderTemplateFileMJ(templateFile string, data *map[string]interface{}, outputFile string) (string, error) {
 	arch := runtime.GOARCH
 
@@ -218,6 +200,9 @@ func renderTemplateFile(templateFile string, data *map[string]interface{}, outpu
 	}
 
 	ofh, err := os.Create(outputFile)
+	if err != nil {
+		return fmt.Sprintf("Cannot Create outputFile %s", outputFile), err
+	}
 	defer ofh.Close()
 	// writer := bufio.NewWriter(ofh)
 
